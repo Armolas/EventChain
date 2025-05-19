@@ -201,6 +201,7 @@ module event_mgnt_sc::event_mgnt_sc {
 
     #[allow(lint(self_transfer))]
     public entry fun buy_ticket(self: &mut Platform, event_id: ID, payment: Coin<SUI>, ctx: &mut TxContext) {
+        let admin = self.admin;
         let event = get_event_mut(self, &event_id); 
         let buyer = tx_context::sender(ctx);
         
@@ -221,7 +222,7 @@ module event_mgnt_sc::event_mgnt_sc {
             let fee_bal = balance::split(&mut taken, fee_amt);
             balance::join(&mut event.balance, taken);
 
-            transfer::public_transfer(coin::from_balance(fee_bal, ctx), PLATFORM_ADDR);
+            transfer::public_transfer(coin::from_balance(fee_bal, ctx), admin);
 
             if (balance::value(&payment_balance) > 0) {
                 transfer::public_transfer(coin::from_balance(payment_balance, ctx), buyer);
