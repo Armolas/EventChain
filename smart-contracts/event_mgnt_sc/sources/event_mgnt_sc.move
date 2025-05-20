@@ -28,12 +28,18 @@ module event_mgnt_sc::event_mgnt_sc {
     const EInvalidPaymentForFreeEvent: u64 = 7;
     const EUnauthorized: u64 = 8;
     const EEventNotEnded: u64 = 9;
-    public enum TicketType has store {
-        General_Admission,
-        VIP
-    }
+
 
     // Structs
+    public struct TicketType has store {
+        name: String,
+        description: String,
+        price: u64,
+        max_tickets: u64,
+        tickets_sold: u64,
+        cover_img: String,
+
+    }
     /// Singleton object that stores the platform fee recipient.
     public struct Platform has key, store {
         id: UID,
@@ -42,7 +48,7 @@ module event_mgnt_sc::event_mgnt_sc {
     }
 
     public struct Event has key, store {
-      
+        
         id: UID,
         organizer: address,
         name: String,
@@ -56,7 +62,7 @@ module event_mgnt_sc::event_mgnt_sc {
         balance: Balance<SUI>,
         closed: bool,
         cover_img:String,
-        ticket_type:TicketType,
+        ticket_type:vector<TicketType>,
     }
 
     public struct EventCap has key, store {
@@ -88,7 +94,7 @@ module event_mgnt_sc::event_mgnt_sc {
         amount: u64,
         organizer: address,
     }
-       // Getter functions for Platform
+    // Getter functions for Platform
     public fun get_platform_events(platform: &Platform): &VecMap<ID, Event> {
         &platform.events
     }
@@ -157,52 +163,70 @@ module event_mgnt_sc::event_mgnt_sc {
 }
 
 
-    public entry fun create_event(
-         self: &mut Platform,
-        name: String,
-       
-        description: String,
-        timestamp: u64,
-        location: String,
-        is_paid: bool,
-        ticket_price: u64,
-        max_tickets: u64,
-        cover_img:String,
-        ticket_type: u64,
-        ctx: &mut TxContext
-    ):ID {
-        let id = object::new(ctx);
-        let organizer = tx_context::sender(ctx);
-        let balance = balance::zero<SUI>();
-        let new_event = Event {
-            id,
-            organizer,
-            name,
-            description,
-            timestamp,
-            location,
-            is_paid,
-            ticket_price,
-            max_tickets,
-            tickets_sold: 0,
-            balance,
-            closed: false,
-            cover_img,
-            ticket_type: if (ticket_type == 0) {
-                TicketType::General_Admission
-            } else if (ticket_type == 1) {
-                TicketType::VIP
-            } else {
-                abort(EInvalidPaymentForFreeEvent)
-            },
-        };
-        let eid = object::uid_to_inner(&new_event.id);
-        sui::vec_map::insert(&mut self.events, eid, new_event);
+ public entry fun create_event(
+    self: &mut Platform,
+    name: String,
+    description: String,
+    timestamp: u64,
+    location: String,
+    is_paid: bool,
+    ticket_price: u64,
+    max_tickets: u64,
+    cover_img: String,
+    ticket_names: vector<String>,
+    ticket_descriptions: vector<String>,
+    ticket_prices: vector<u64>,
+    ticket_limits: vector<u64>,
+    ticket_images: vector<String>,
+    ctx: &mut TxContext
+): ID {
+   
+    let id = object::new(ctx);
+    let organizer = tx_context::sender(ctx);
+    let balance = balance::zero<SUI>();
 
-        let cap = EventCap { id: object::new(ctx), event_id: eid };
-        transfer::transfer(cap, organizer);
-        eid
-    }
+    let mut ticket_types: vector<TicketType> = vector::empty();
+    let len = vector::length(&ticket_names);
+    let mut i = 0;
+    while (i < len) {
+        let t = TicketType {
+            name: *vector::borrow(&ticket_names, i),
+            description: *vector::borrow(&ticket_descriptions, i),
+            price: *vector::borrow(&ticket_prices, i),
+            max_tickets: *vector::borrow(&ticket_limits, i),
+            tickets_sold: 0,
+            cover_img: *vector::borrow(&ticket_images, i),
+        };
+        vector::push_back(&mut ticket_types, t);
+        i = i + 1;
+    };
+
+
+    let new_event = Event {
+        id,
+        organizer,
+        name,
+        description,
+        timestamp,
+        location,
+        is_paid,
+        ticket_price,
+        max_tickets,
+        tickets_sold: 0,
+        balance,
+        closed: false,
+        cover_img,
+        ticket_type: ticket_types,
+    };
+
+    let eid = object::uid_to_inner(&new_event.id);
+    sui::vec_map::insert(&mut self.events, eid, new_event);
+
+    let cap = EventCap { id: object::new(ctx), event_id: eid };
+    transfer::transfer(cap, organizer);
+    eid
+}
+
     public fun get_event_mut(
         self: &mut Platform,
         event_id: &ID
