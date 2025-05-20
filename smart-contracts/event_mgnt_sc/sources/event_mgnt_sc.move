@@ -28,6 +28,10 @@ module event_mgnt_sc::event_mgnt_sc {
     const EInvalidPaymentForFreeEvent: u64 = 7;
     const EUnauthorized: u64 = 8;
     const EEventNotEnded: u64 = 9;
+    public enum TicketType has store {
+        General_Admission,
+        VIP
+    }
 
     // Structs
     /// Singleton object that stores the platform fee recipient.
@@ -51,6 +55,8 @@ module event_mgnt_sc::event_mgnt_sc {
         tickets_sold: u64,
         balance: Balance<SUI>,
         closed: bool,
+        cover_img:String,
+        ticket_type:TicketType,
     }
 
     public struct EventCap has key, store {
@@ -145,6 +151,7 @@ module event_mgnt_sc::event_mgnt_sc {
         id: object::new(ctx),
         admin: tx_context::sender(ctx),
         events: sui::vec_map::empty<ID, Event>(),
+    
     };
     transfer::transfer(platform, tx_context::sender(ctx));
 }
@@ -160,6 +167,8 @@ module event_mgnt_sc::event_mgnt_sc {
         is_paid: bool,
         ticket_price: u64,
         max_tickets: u64,
+        cover_img:String,
+        ticket_type: u64,
         ctx: &mut TxContext
     ):ID {
         let id = object::new(ctx);
@@ -178,6 +187,14 @@ module event_mgnt_sc::event_mgnt_sc {
             tickets_sold: 0,
             balance,
             closed: false,
+            cover_img,
+            ticket_type: if (ticket_type == 0) {
+                TicketType::General_Admission
+            } else if (ticket_type == 1) {
+                TicketType::VIP
+            } else {
+                abort(EInvalidPaymentForFreeEvent)
+            },
         };
         let eid = object::uid_to_inner(&new_event.id);
         sui::vec_map::insert(&mut self.events, eid, new_event);
