@@ -1,0 +1,2 @@
+export const testnetEventPackageId = "0xeeea3e14b44ebc4db154f243ecfc6cbdbee8390b4c01a6b8cf893a4d5514a65c";
+export const platformId = "0xe6b0262ccc815a841f3a7550c828b87d32b28ecf0851f326a347c44a1c50c88f";
