@@ -84,6 +84,7 @@ module event_mgnt_sc::event_mgnt_sc {
     public struct Ticket has store, copy, drop {
         id: u64,
         event_id: ID,
+        ticket_type: u64,
         owner: address,
         attended: bool,
         poap_claimed: bool,
@@ -383,6 +384,7 @@ module event_mgnt_sc::event_mgnt_sc {
         let ticket = Ticket {
             id: event.tickets_sold,
             event_id: event_id_copy,
+            ticket_type: ticket_type_id,
             owner: buyer,
             attended: false,
             poap_claimed: false,
