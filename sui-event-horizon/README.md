@@ -1,73 +1,96 @@
-# Welcome to your Lovable project
+# 🎉 EventChain - Decentralized Event Management on Sui
 
-## Project info
+EventChain is a decentralized event management platform built on the **Sui blockchain**. It empowers **event organizers** to create both free and paid events, sell NFT-based tickets, and distribute **Proof of Attendance Protocol (POAP)** NFTs after events. Users can explore events, purchase tickets, and prove their attendance – all powered by secure smart contracts.
 
-**URL**: https://lovable.dev/projects/cedbc01d-b0a2-4ab5-978b-3f15316e87b5
+---
 
-## How can I edit this code?
+## ✨ Features
 
-There are several ways of editing your application.
+### 👥 For Users
+- 📅 Browse and explore events
+- 🎟 Purchase NFT-based tickets (VIP/Regular tiers)
+- 🔁 Transfer/resell tickets to others
+- 🪪 Claim **POAP NFTs** after attending events
+- 💼 View your owned tickets and POAPs
 
-**Use Lovable**
+### 🧑‍💼 For Event Organizers
+- 🛠 Create free or paid events
+- 🧾 Define ticket tiers, price, and quantity
+- 💰 Withdraw revenue after event ends
+- 🔐 Only event creators can manage their events
 
-Simply visit the [Lovable Project](https://lovable.dev/projects/cedbc01d-b0a2-4ab5-978b-3f15316e87b5) and start prompting.
+### 👑 For Contract Owner (Platform Admin)
+- 🧾 Earns **5% commission** on every paid ticket sale
+- 🏦 Withdraw accumulated platform fees
+- 🛡 Owns `OwnerCap` that authorizes sensitive admin functions
 
-Changes made via Lovable will be committed automatically to this repo.
+---
 
-**Use your preferred IDE**
+## 🔧 Smart Contract Overview (Sui + Move)
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+The smart contract is written in Move and deployed on the **Sui blockchain**.
 
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
+### 📚 Modules and Capabilities
 
-Follow these steps:
+- `Event`: Represents an event (name, description, date, ticket tiers)
+- `Ticket`: NFT ticket minted upon purchase (VIP, Regular)
+- `POAP`: NFT issued to attendees after the event
+- `EventManager`: Stores and manages all events on-chain
+- `OwnerCap`: Grants special permissions to the platform admin
 
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
+### 🧠 Core Functions
 
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
+| Function | Description |
+|---------|-------------|
+| `create_event` | Organizer creates an event with tiered tickets |
+| `buy_ticket` | User buys ticket to an event (NFT minted) |
+| `transfer_ticket` | User transfers ticket to another wallet |
+| `withdraw_revenue` | Organizer withdraws event revenue after it ends |
+| `claim_poap` | Attendee claims a POAP NFT after the event |
+| `withdraw_platform_fee` | Owner withdraws 5% platform commission |
 
-# Step 3: Install the necessary dependencies.
-npm i
+---
 
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
-```
+## 🖥 Frontend Interface
 
-**Edit a file directly in GitHub**
+Built with **React + Tailwind CSS** (or optionally Next.js), the dApp has:
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+- Home page with event showcase
+- Event explorer with filters
+- Event detail page with ticket purchase
+- Ticket dashboard (owned NFTs)
+- POAP collection page
+- Event creation page
+- Organizer dashboard
+- Admin panel (for owner only)
 
-**Use GitHub Codespaces**
+Integration with **Sui Wallet** is used for all transactions and signature authorizations.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+---
 
-## What technologies are used for this project?
+## 🧪 Testnet Deployment
 
-This project is built with:
+| Contract | Status |
+|----------|--------|
+| EventChain Move Package | ✅ Deployed |
+| Network | Sui Testnet |
+| Explorer Link | *Coming Soon* |
+| Contract Address | *Coming Soon* |
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
+---
 
-## How can I deploy this project?
+## 🛠️ Local Development Setup
 
-Simply open [Lovable](https://lovable.dev/projects/cedbc01d-b0a2-4ab5-978b-3f15316e87b5) and click on Share -> Publish.
+### 🔗 Prerequisites
+- [Node.js](https://nodejs.org)
+- [Sui CLI](https://docs.sui.io/build/install)
+- [Git](https://git-scm.com)
 
-## Can I connect a custom domain to my Lovable project?
+### 🚀 Backend (Move Contract)
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/tips-tricks/custom-domain#step-by-step-guide)
+```bash
+git clone https://github.com/your-org/eventchain.git
+cd eventchain
+sui move build
+sui move test
+sui client publish --gas-budget 100000000
