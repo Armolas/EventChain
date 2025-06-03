@@ -51,7 +51,7 @@ const TicketCard = ({ ticket }: TicketCardProps) => {
           <div className="absolute bottom-3 left-3 text-white">
             <h3 className="font-bold text-lg line-clamp-1">{ticket.eventName}</h3>
             <div className="text-xs opacity-80 flex items-center gap-2 mt-1">
-              <span>{ticket.id}</span>
+              <span>{ticketType?.name || "General Admission"}</span>
               {ticket.attended ? (
                 <span className="flex items-center text-emerald-300">
                   <Check className="h-3 w-3 mr-1" /> Attended
