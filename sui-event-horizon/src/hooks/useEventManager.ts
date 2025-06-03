@@ -1,13 +1,13 @@
 // hooks/useEventManager.ts
 import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
 import { Transaction } from '@mysten/sui/transactions';
-import { useNetworkVariable } from '../utils/networkConfig';
 import { useQuery } from '@tanstack/react-query';
+
 
 export function useEventManager() {
   const { mutateAsync: signAndExecuteTransaction } = useSignAndExecuteTransaction();
   const suiClient = useSuiClient();
-  const packageId = "0xeeea3e14b44ebc4db154f243ecfc6cbdbee8390b4c01a6b8cf893a4d5514a65c";
+  const packageId = "0x00d783254dc24acdd0f6fbe2dd43bea9b33dd28fbd5e83bd88f2f8a8ac1cd51e";
   const account = useCurrentAccount();
 
   // ========== Transaction Functions ==========
@@ -38,9 +38,8 @@ export function useEventManager() {
     ticketImages: string[]
   ) => {
     const tx = new Transaction();
-    const target = `${packageId}::event_mgnt_sc::create_event`;
     tx.moveCall({
-      target: target,
+      target: `${packageId}::event_mgnt_sc::create_event`,
       arguments: [
         tx.object(platformId),
         tx.pure.string(name),
@@ -58,7 +57,6 @@ export function useEventManager() {
     });
     return signAndExecuteTransaction({ transaction: tx });
   };
-
 
   // Buy Ticket
   const buyTicket = async (
@@ -85,50 +83,37 @@ export function useEventManager() {
     return signAndExecuteTransaction({ transaction: tx });
   };
 
-
-
   // Mark Attended
-  const markAttended = async (
-    platformId: string,
-    ticketId: string,
-    capId: string
-  ) => {
+  const markAttended = async (platformId: string, ticketId: string) => {
     const tx = new Transaction();
-    const target = `${packageId}::event_mgnt_sc::mark_attended`;
     tx.moveCall({
-      target: target,
+      target: `${packageId}::event_mgnt_sc::mark_attended`,
       arguments: [
         tx.object(platformId),
         tx.object(ticketId),
-        tx.object(capId),
       ],
     });
     return signAndExecuteTransaction({ transaction: tx });
   };
 
   // Close Event
-  const closeEvent = async (platformId: string, eventId: string, capId: string) => {
+  const closeEvent = async (eventId: string) => {
     const tx = new Transaction();
-    const target = `${packageId}::event_mgnt_sc::close_event`;
     tx.moveCall({
-      target: target,
+      target: `${packageId}::event_mgnt_sc::close_event`,
       arguments: [
-        tx.object(platformId),
         tx.object(eventId),
-        tx.object(capId),
       ],
     });
     return signAndExecuteTransaction({ transaction: tx });
   };
 
   // Claim POAP
-  const claimPoap = async (platformId: string, ticketId: string) => {
+  const claimPoap = async (ticketId: string) => {
     const tx = new Transaction();
-    const target = `${packageId}::event_mgnt_sc::claim_poap`;
     tx.moveCall({
-      target: target,
+      target: `${packageId}::event_mgnt_sc::claim_poap`,
       arguments: [
-        tx.object(platformId),
         tx.object(ticketId),
       ],
     });
@@ -136,17 +121,11 @@ export function useEventManager() {
   };
 
   // Withdraw Revenue
-  const withdrawRevenue = async (
-    platformId: string,
-    eventId: string,
-    clockId: string
-  ) => {
+  const withdrawRevenue = async (eventId: string, clockId: string = '0x6') => {
     const tx = new Transaction();
-    const target = `${packageId}::event_mgnt_sc::withdraw_revenue`;
     tx.moveCall({
-      target: target,
+      target: `${packageId}::event_mgnt_sc::withdraw_revenue`,
       arguments: [
-        tx.object(platformId),
         tx.object(eventId),
         tx.object(clockId),
       ],
@@ -155,17 +134,11 @@ export function useEventManager() {
   };
 
   // Transfer Ticket
-  const transferTicket = async (
-    platformId: string,
-    ticketId: string,
-    recipient: string
-  ) => {
+  const transferTicket = async (ticketId: string, recipient: string) => {
     const tx = new Transaction();
-    const target = `${packageId}::event_mgnt_sc::transfer_ticket`;
     tx.moveCall({
-      target: target,
+      target: `${packageId}::event_mgnt_sc::transfer_ticket`,
       arguments: [
-        tx.object(platformId),
         tx.object(ticketId),
         tx.pure.address(recipient),
       ],
@@ -174,10 +147,7 @@ export function useEventManager() {
   };
 
   // Update Platform Admin
-  const updatePlatformAdmin = async (
-    platformId: string,
-    newAdmin: string
-  ) => {
+  const updatePlatformAdmin = async (platformId: string, newAdmin: string) => {
     const tx = new Transaction();
     tx.moveCall({
       target: `${packageId}::event_mgnt_sc::update_platform_admin`,
@@ -191,7 +161,6 @@ export function useEventManager() {
 
   // Update Event
   const updateEvent = async (
-    platformId: string,
     eventId: string,
     name: string,
     description: string,
@@ -203,7 +172,6 @@ export function useEventManager() {
     tx.moveCall({
       target: `${packageId}::event_mgnt_sc::update_event`,
       arguments: [
-        tx.object(platformId),
         tx.object(eventId),
         tx.pure.string(name),
         tx.pure.string(description),
@@ -237,10 +205,6 @@ export function useEventManager() {
         if (!platform.data?.content || platform.data.content.dataType !== 'moveObject') {
           return [];
         }
-        
-        // The events are stored in a VecMap in the platform object
-        // This might require custom parsing depending on how it's stored
-        // You may need to adjust this based on your actual storage structure
         const contentFields = (platform.data.content as any)?.fields || {};
         const events = contentFields.events?.fields?.contents || [];
         return events.map((event: any) => event.fields.value);
@@ -249,8 +213,8 @@ export function useEventManager() {
     });
   };
 
-  // Get all active events (not closed)
-  const useActiveEvents = (platformId: string) => {
+  // Get all active events using the contract's getter
+   const useActiveEvents = (platformId: string) => {
     return useQuery({
       queryKey: ['activeEvents', platformId],
       queryFn: async () => {
@@ -269,48 +233,43 @@ export function useEventManager() {
     });
   };
 
-  // Get user tickets
-  const useUserTickets = (platformId: string, userAddress: string) => {
+  // Get user tickets (query owned objects of type Ticket)
+  const useUserTickets = (userAddress: string) => {
     return useQuery({
-      queryKey: ['userTickets', platformId, userAddress],
+      queryKey: ['userTickets', userAddress],
       queryFn: async () => {
-        const platform = await getPlatform(platformId);
-        if (!platform.data?.content || platform.data.content.dataType !== 'moveObject') {
-          return [];
-        }
-        
-        // Check if user exists in the platform's users map
-        const fields = (platform.data.content as any)?.fields || {};
-        const users = fields.users?.fields?.contents || [];
-        const user = users.find((u: any) => u.fields.key === userAddress);
-        
-        return user?.fields.value?.fields?.tickets || [];
+        const objects = await suiClient.getOwnedObjects({
+          owner: userAddress,
+          filter: {
+            StructType: `${packageId}::event_mgnt_sc::Ticket`,
+          },
+          options: { showContent: true },
+        });
+        return objects.data.map((obj: any) => (obj.data.content as any)?.fields || {});
       },
-      enabled: !!platformId && !!userAddress,
+      enabled: !!userAddress,
     });
   };
 
-  // Get user POAPs
-  const useUserPoaps = (platformId: string, userAddress: string) => {
+  // Get user POAPs (query owned objects of type Poap)
+  const useUserPoaps = (userAddress: string) => {
     return useQuery({
-      queryKey: ['userPoaps', platformId, userAddress],
+      queryKey: ['userPoaps', userAddress],
       queryFn: async () => {
-        const platform = await getPlatform(platformId);
-        if (!platform.data?.content || platform.data.content.dataType !== 'moveObject') {
-          return [];
-        }
-        
-        // Check if user exists in the platform's users map
-        const users = (platform.data.content as any).fields.users?.fields?.contents || [];
-        const user = users.find((u: any) => u.fields.key === userAddress);
-        
-        return user?.fields.value?.fields?.poaps || [];
+        const objects = await suiClient.getOwnedObjects({
+          owner: userAddress,
+          filter: {
+            StructType: `${packageId}::event_mgnt_sc::Poap`,
+          },
+          options: { showContent: true },
+        });
+        return objects.data.map((obj: any) => (obj.data.content as any)?.fields || {});
       },
-      enabled: !!platformId && !!userAddress,
+      enabled: !!userAddress,
     });
   };
 
-  // Get events by organizer
+  // Get events by organizer using the contract's getter
   const useEventsByOrganizer = (platformId: string, organizerAddress: string) => {
     return useQuery({
       queryKey: ['organizerEvents', platformId, organizerAddress],
@@ -356,7 +315,7 @@ export function useEventManager() {
       queryKey: ['eventTicketTypes', platformId, eventId],
       queryFn: async () => {
         const event = await useEventById(platformId, eventId).data;
-        return event?.fields?.ticket_type || [];
+        return event?.ticket_type || [];
       },
       enabled: !!platformId && !!eventId,
     });
@@ -374,7 +333,7 @@ export function useEventManager() {
     transferTicket,
     updatePlatformAdmin,
     updateEvent,
-    
+
     // Getter functions
     getPlatform,
     useAllEvents,
