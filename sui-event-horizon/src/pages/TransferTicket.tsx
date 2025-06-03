@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useEvents } from "@/contexts/EventsContext";
 // import { useWallet } from "@/contexts/WalletContext";
@@ -15,13 +15,21 @@ import { ConnectButton } from "@mysten/dapp-kit";
 const TransferTicket = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { userTickets } = useEvents();
+  const { userTickets, getEventById, transferEventTicket } = useEvents();
   const { isConnected, connect } = useWalletConnection();
   const [recipientAddress, setRecipientAddress] = useState("");
   const [isTransferring, setIsTransferring] = useState(false);
+  const [ticketType, setTicketType] = useState("");
   
   const ticket = userTickets.find(ticket => ticket.id === id);
-  
+  useEffect(() => {
+    if (ticket) {
+      const event = getEventById(ticket.eventId);
+      if (event) {
+        setTicketType(event.ticketTypes[ticket.ticketTypeId].name);
+      }
+    }
+  }, [ticket]);
   if (!isConnected) {
     return (
       <div className="container mx-auto px-4 py-16 flex flex-col items-center justify-center">
@@ -74,11 +82,8 @@ const TransferTicket = () => {
     try {
       setIsTransferring(true);
       
-      // Simulate blockchain transfer delay
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // This would call the actual contract in a real implementation
-      // await contractTransferTicket(id, recipientAddress);
+      await transferEventTicket(ticket.id, recipientAddress);
+      setRecipientAddress("");
       
       toast.success("Ticket transferred successfully!");
       navigate('/my-tickets');
@@ -110,7 +115,7 @@ const TransferTicket = () => {
                 
                 <div>
                   <h3 className="font-bold text-lg">{ticket.eventName}</h3>
-                  <p className="text-sm text-muted-foreground">{ticket.ticketType}</p>
+                  <p className="text-sm text-muted-foreground">{ticketType}</p>
                 </div>
                 
                 <div className="text-sm">
