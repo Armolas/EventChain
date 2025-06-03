@@ -32,15 +32,6 @@ module event_mgnt_sc::event_mgnt_sc {
     const EEventNotEnded: u64 = 9;
 
 
-   
-    // Structs
-     /// Stores user details and their tickets
-    public struct User has copy, store, drop {
-        owner: address,
-        tickets: vector<Ticket>,
-        poaps: vector<Poap>,
-    }
-
     public struct TicketType has store {
         name: String,
         description: String,
@@ -54,8 +45,7 @@ module event_mgnt_sc::event_mgnt_sc {
     public struct Platform has key, store {
         id: UID,
         admin: address,
-        events: VecMap<ID, Event>,
-        users: VecMap<address, User>,
+        events: VecMap<ID, Event>
     }
 
     public struct Event has key, store {
@@ -72,17 +62,12 @@ module event_mgnt_sc::event_mgnt_sc {
         closed: bool,
         cover_img:String,
         ticket_type:vector<TicketType>,
-        registered_users: vector<User>, // registered User objects
-        attended_users: vector<User>, // attended User objects
+        registered_users: vector<address>, // registered User objects
+        attended_users: vector<address>, // attended User objects
     }
 
-    public struct EventCap has key, store {
+    public struct Ticket has key, store {
         id: UID,
-        event_id: ID,
-    }
-
-    public struct Ticket has store, copy, drop {
-        id: u64,
         event_id: ID,
         ticket_type: u64,
         owner: address,
@@ -91,8 +76,8 @@ module event_mgnt_sc::event_mgnt_sc {
     }
 
 
-    public struct Poap has store, drop, copy {
-        id: ID,
+    public struct Poap has key, store {
+        id: UID,
         event_id: ID,
     }
 
@@ -150,44 +135,9 @@ module event_mgnt_sc::event_mgnt_sc {
     public fun get_event_closed(event: &Event): bool {
         event.closed
     }
-
-    // Getter function for EventCap
-    public fun get_event_cap_event_id(cap: &EventCap): ID {
-        cap.event_id
-    }
  
     public fun get_event_ticket_type(event: &Event): &vector<TicketType> {
         &event.ticket_type
-    }
-
-    public fun get_user_tickets(platform: &Platform,  ctx: &mut TxContext): vector<Ticket> {
-        let sender = tx_context::sender(ctx);
-        if (!sui::vec_map::contains(&platform.users, &sender)) {
-            return vector::empty<Ticket>();
-        };
-        let user = sui::vec_map::get(&platform.users, &sender);
-        user.tickets
-    }
-
-    fun get_or_create_user(
-        platform: &mut Platform,
-        ctx: &mut TxContext
-    ): &mut User {
-        let sender = tx_context::sender(ctx);
-
-        if (sui::vec_map::contains(&platform.users, &sender)) {
-            return vec_map::get_mut(&mut platform.users, &sender);
-        };
-
-        // If not found, create a new user
-        let new_user = User {
-            owner: sender,
-            tickets: vector::empty<Ticket>(),
-            poaps: vector::empty<Poap>(),
-        };
-
-        vec_map::insert(&mut platform.users, sender, new_user);
-        vec_map::get_mut(&mut platform.users, &sender)
     }
 
     // Getter: Return all active events (not closed)
@@ -204,16 +154,6 @@ module event_mgnt_sc::event_mgnt_sc {
             i = i + 1;
         };
         result
-    }
-    // Getter: Return all POAPs a user owns (passed internally)
-    public fun get_user_poaps(platform: &Platform, ctx: &mut TxContext): vector<Poap> {
-        let mut result = vector::empty<Poap>();
-        let sender = tx_context::sender(ctx);
-        if (!vec_map::contains(&platform.users, &sender)) {
-            return result;
-        };
-        let user = vec_map::get(&platform.users, &sender);
-        user.poaps
     }
 
 
@@ -243,8 +183,7 @@ module event_mgnt_sc::event_mgnt_sc {
         let platform = Platform {
             id: object::new(ctx),
             admin: tx_context::sender(ctx),
-            events: sui::vec_map::empty<ID, Event>(),
-            users: sui::vec_map::empty<address, User>(),
+            events: sui::vec_map::empty<ID, Event>()
         };
         transfer::share_object(platform); // 🔥 this will make it shared
     }
@@ -268,8 +207,6 @@ module event_mgnt_sc::event_mgnt_sc {
         let id = object::new(ctx);
         let organizer = tx_context::sender(ctx);
         let balance = balance::zero<SUI>();
-        let sender = tx_context::sender(ctx);
-        let user = get_or_create_user(self, ctx);
 
         let mut ticket_types: vector<TicketType> = vector::empty();
         let len = vector::length(&ticket_names);
@@ -286,12 +223,8 @@ module event_mgnt_sc::event_mgnt_sc {
             vector::push_back(&mut ticket_types, t);
             i = i + 1;
         };
-        let mut registered_users = vector::empty<User>();
-        let mut attended_users = vector::empty<User>();
-
-        // let u_user = sui::vec_map::get(&self.users, &sender);
-
-        // vector::push_back(&mut registered_users, u_user);
+        let mut registered_users = vector::empty<address>();
+        let mut attended_users = vector::empty<address>();
 
 
         let new_event = Event {
@@ -313,9 +246,7 @@ module event_mgnt_sc::event_mgnt_sc {
 
         let eid = object::uid_to_inner(&new_event.id);
         sui::vec_map::insert(&mut self.events, eid, new_event);
-
-        let cap = EventCap { id: object::new(ctx), event_id: eid };
-        transfer::transfer(cap, organizer);
+        transfer::transfer(new_event, organizer);
         eid
     }
 
@@ -346,9 +277,10 @@ module event_mgnt_sc::event_mgnt_sc {
         let buyer = tx_context::sender(ctx);
         let price = event.ticket_type[ticket_type_id].price;
         let max_tickets = event.ticket_type[ticket_type_id].max_tickets;
+        let ticket_sold = event.ticket_type[ticket_type_id].tickets_sold;
 
         assert!(!event.closed, E_EVENT_CLOSED);
-        assert!(event.tickets_sold < max_tickets, EMaxTicketsReached);
+        assert!(ticket_sold < max_tickets, EMaxTicketsReached);
 
         if (event.is_paid) {
             let value = coin::value(&payment);
@@ -358,7 +290,7 @@ module event_mgnt_sc::event_mgnt_sc {
             let mut taken = balance::split(&mut payment_balance, price);
 
             let fee_amt = price * FEE_BPS / BPS_DENOM;
-            let org_amt = price - fee_amt;
+            let _org_amt = price - fee_amt;
 
             let fee_bal = balance::split(&mut taken, fee_amt);
             balance::join(&mut event.balance, taken);
@@ -376,13 +308,15 @@ module event_mgnt_sc::event_mgnt_sc {
         };
 
         event.tickets_sold = event.tickets_sold + 1;
+        event.ticket_type[ticket_type_id].tickets_sold = event.ticket_type[ticket_type_id].tickets_sold + 1;
 
         // Step 2: Release the mutable borrow of `event` before using `self` again
         let event_id_copy = object::uid_to_inner(&event.id); // make a copy
+         let id = object::new(ctx);
 
         // Now, create the user and push ticket
         let ticket = Ticket {
-            id: event.tickets_sold,
+            id,
             event_id: event_id_copy,
             ticket_type: ticket_type_id,
             owner: buyer,
@@ -398,40 +332,43 @@ module event_mgnt_sc::event_mgnt_sc {
             buyer,
         });
 
-        let user = get_or_create_user(self, ctx);
-        vector::push_back(&mut user.tickets, ticket);
+        transfer::transfer(ticket, buyer);
+
+        
     }
 
 
-    public fun mark_attended(self: &mut Platform, ticket: &mut Ticket, cap: &EventCap, ctx: &mut TxContext) {
+    public fun mark_attended(self: &mut Platform, ticket: &mut Ticket, ctx: &mut TxContext) {
         let sender = tx_context::sender(ctx);
-        assert!(ticket.event_id == cap.event_id, E_WRONG_EVENT);
         let event = sui::vec_map::get_mut(&mut self.events, &ticket.event_id);
         assert!(event.organizer == sender, EUnauthorized);
+        assert!(ticket.attended == false, E_NOT_ATTENDED);
         let owner = ticket.owner;
-        let user = vec_map::get(&self.users, &owner);
-        vector::push_back(&mut event.attended_users, *user);
-
+        if (!vector::contains(&event.registered_users, &owner)) {
+            vector::push_back(&mut event.registered_users, owner);
+        };
         ticket.attended = true;
     }
 
-    public entry fun close_event(event: &mut Event, cap: &EventCap) {
-        let event_id = object::uid_to_inner(&event.id);
-        assert!(event_id == cap.event_id, E_WRONG_EVENT);
+    public entry fun close_event(event: &mut Event, ctx: &mut TxContext) {
+        let sender = tx_context::sender(ctx);
+        assert!(event.organizer == sender, EUnauthorized);
         event.closed = true;
     }
 
-    public fun claim_poap(self: &mut Platform, ticket: &mut Ticket, ctx: &mut TxContext) {
+    public fun claim_poap(ticket: &mut Ticket, ctx: &mut TxContext) {
         assert!(ticket.attended, E_NOT_ATTENDED);
         assert!(!ticket.poap_claimed, E_POAP_CLAIMED);
         let owner = ticket.owner;
-        let user = vec_map::get_mut(&mut self.users, &owner);
+        let sender = tx_context::sender(ctx);
+        assert!(owner == sender, EUnauthorized);
         ticket.poap_claimed = true;
+        let id = object::new(ctx);
         let poap = Poap {
-            id: ticket.event_id,
+            id,
             event_id: ticket.event_id,
         };
-        vector::push_back(&mut user.poaps, poap);
+        transfer::transfer(poap, owner);
         
     }
 
@@ -453,9 +390,13 @@ module event_mgnt_sc::event_mgnt_sc {
         coin::from_balance(bal, ctx)
     }
 
-    public fun transfer_ticket(ticket: &mut Ticket, recipient: address, _ctx: &mut TxContext) {
+    public entry fun transfer_ticket(ticket: Ticket, recipient: address, _ctx: &mut TxContext) {
         assert!(ticket.owner == tx_context::sender(_ctx), EUnauthorized);
-        ticket.owner = recipient;
+        assert!(ticket.attended == false, E_NOT_ATTENDED);
+        assert!(recipient != ticket.owner, EUnauthorized);
+        let mut ticket_mut = ticket;
+        ticket_mut.owner = recipient;
+        transfer::public_transfer(ticket_mut, recipient);
     }
     public entry fun update_platform_admin(
         platform: &mut Platform,
