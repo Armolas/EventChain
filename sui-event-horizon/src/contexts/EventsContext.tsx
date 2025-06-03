@@ -57,6 +57,7 @@ interface EventsContextProps {
   markAttended: (ticketId: string, capId: string) => Promise<boolean>;
   claimPoap: (ticketId: string) => Promise<boolean>;
   refreshData: () => Promise<void>;
+  transferEventTicket: (ticketId: string, recipientAddress: string) => Promise<boolean>;
 }
 
 export interface EventFilters {
@@ -92,6 +93,7 @@ export const EventsProvider = ({ children, platformId }: EventsProviderProps) =>
     useEventsByOrganizer,
     useEventById,
     buyTicket,
+    transferTicket,
     createEvent: createEventSC,
     markAttended: markAttendedSC,
     claimPoap: claimPoapSC,
@@ -109,12 +111,10 @@ export const EventsProvider = ({ children, platformId }: EventsProviderProps) =>
   
   // Fetch user-specific data
   const { data: userTicketsData, refetch: refetchUserTickets } = useUserTickets(
-    platformId,
     currentAccount?.address || ''
   );
   
   const { data: userPoapsData, refetch: refetchUserPoaps } = useUserPoaps(
-    platformId,
     currentAccount?.address || ''
   );
 
@@ -145,15 +145,15 @@ export const EventsProvider = ({ children, platformId }: EventsProviderProps) =>
 
   const transformTicketData = useCallback((rawTickets: any[], events: Event[]): Ticket[] => {
     return rawTickets.map((ticket: any) => {
-      const event = events.find(e => e.id === ticket.fields.event_id);
+      const event = events.find(e => e.id === ticket.event_id);
       return {
-        id: ticket.fields.id.toString(),
-        eventId: ticket.fields.event_id,
-        ticketTypeId: ticket.fields.ticket_type,
+        id: ticket.id.id.toString(),
+        eventId: ticket.event_id,
+        ticketTypeId: ticket.ticket_type,
         eventName: event?.name || 'Unknown Event',
-        owner: ticket.fields.owner,
-        attended: ticket.fields.attended,
-        poapClaimed: ticket.fields.poap_claimed,
+        owner: ticket.owner,
+        attended: ticket.attended,
+        poapClaimed: ticket.poap_claimed,
       };
     });
   }, []);
@@ -243,6 +243,28 @@ export const EventsProvider = ({ children, platformId }: EventsProviderProps) =>
     return events.find(event => event.id === id);
   }, [events]);
 
+  const transferEventTicket = useCallback(async (
+    ticketId: string,
+    recipientAddress: string,
+  ): Promise<boolean> => {
+    try {
+      setLoading(true);
+      const ticket = userTickets.find(t => t.id === ticketId);
+      if (!ticket) {
+        throw new Error('Ticket not found');
+      }
+      console.log('Transferring ticket:', { ticketId, recipientAddress });
+      await transferTicket(ticketId, recipientAddress);
+      await refreshData();
+      return true;
+    } catch (error) {
+      console.error('Error transferring ticket:', error);
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [transferTicket, platformId, userTickets, refreshData]); 
+
   const purchaseTicket = useCallback(async (
     eventId: string,
     ticketTypeId: number,
@@ -310,11 +332,10 @@ export const EventsProvider = ({ children, platformId }: EventsProviderProps) =>
 
   const markAttended = useCallback(async (
     ticketId: string,
-    capId: string
   ): Promise<boolean> => {
     try {
       setLoading(true);
-      await markAttendedSC(platformId, ticketId, capId);
+      await markAttendedSC(platformId, ticketId);
       await refreshData();
       return true;
     } catch (error) {
@@ -330,7 +351,7 @@ export const EventsProvider = ({ children, platformId }: EventsProviderProps) =>
   ): Promise<boolean> => {
     try {
       setLoading(true);
-      await claimPoapSC(platformId, ticketId);
+      await claimPoapSC(ticketId);
       await refreshData();
       return true;
     } catch (error) {
@@ -356,6 +377,7 @@ export const EventsProvider = ({ children, platformId }: EventsProviderProps) =>
         markAttended,
         claimPoap,
         refreshData,
+        transferEventTicket
       }}
     >
       {children}
