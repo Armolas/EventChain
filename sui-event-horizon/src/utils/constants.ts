@@ -1,2 +1,2 @@
-export const testnetEventPackageId = "0xeeea3e14b44ebc4db154f243ecfc6cbdbee8390b4c01a6b8cf893a4d5514a65c";
-export const platformId = "0xe6b0262ccc815a841f3a7550c828b87d32b28ecf0851f326a347c44a1c50c88f";
+export const testnetEventPackageId = "0x00d783254dc24acdd0f6fbe2dd43bea9b33dd28fbd5e83bd88f2f8a8ac1cd51e";
+export const platformId = "0x0fa9012f94fc42f5a5abde36e26b8f494beff3193016fdf8e48a38da811cd2da";
