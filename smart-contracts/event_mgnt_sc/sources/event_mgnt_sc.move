@@ -246,7 +246,6 @@ module event_mgnt_sc::event_mgnt_sc {
 
         let eid = object::uid_to_inner(&new_event.id);
         sui::vec_map::insert(&mut self.events, eid, new_event);
-        transfer::transfer(new_event, organizer);
         eid
     }
 
